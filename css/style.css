@@ -1,0 +1,79 @@
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #18181C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2C2C35;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #D4AF37;
+}
+
+/* Base custom styles & Utilities */
+.service-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.service-card:hover {
+  transform: translateY(-2px);
+}
+
+.service-card.selected {
+  border-color: #D4AF37;
+  background-color: rgba(212, 175, 55, 0.08);
+}
+
+.slot-btn {
+  transition: all 0.2s ease-in-out;
+}
+
+.slot-btn:hover:not(:disabled) {
+  border-color: #D4AF37;
+  transform: translateY(-1px);
+}
+
+.slot-btn.selected {
+  background-color: #D4AF37;
+  color: #0F0F12;
+  border-color: #D4AF37;
+  font-weight: 700;
+}
+
+/* Toast Animations */
+@keyframes toastIn {
+  from {
+    transform: translateY(100%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes toastOut {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.toast-enter {
+  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-exit {
+  animation: toastOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}

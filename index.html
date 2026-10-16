@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barbearia Império - Agendamento Online</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            gold: {
+              DEFAULT: '#D4AF37',
+              light: '#F3E5AB',
+              dark: '#AA820A',
+              hover: '#B89628'
+            },
+            dark: {
+              900: '#0F0F12',
+              800: '#18181C',
+              700: '#222228',
+              600: '#2C2C35'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Montserrat', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-dark-900 text-gray-100 font-sans min-h-screen flex flex-col antialiased selection:bg-gold selection:text-dark-900">
+
+  <!-- Header / Navigation -->
+  <header class="sticky top-0 z-40 bg-dark-800/90 backdrop-blur-md border-b border-gray-800 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        
+        <!-- Logo -->
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="AppController.switchTab('customer')">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-gold-dark via-gold to-gold-light flex items-center justify-between p-0.5 shadow-md shadow-gold/10">
+            <div class="w-full h-full bg-dark-900 rounded-full flex items-center justify-center">
+              <i class="fa-solid font-bold fa-scissors text-gold text-xl transform -rotate-45"></i>
+            </div>
+          </div>
+          <div>
+            <span class="font-heading font-extrabold text-xl tracking-wider text-white uppercase block leading-none">
+              IMPÉRIO
+            </span>
+            <span class="text-xs text-gold font-medium tracking-widest uppercase">Barbearia & Barber Shop</span>
+          </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <nav class="flex items-center space-x-2 sm:space-x-4">
+          <button id="navCustomerBtn" onclick="AppController.switchTab('customer')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-gold text-dark-900 shadow-md shadow-gold/20 flex items-center gap-2">
+            <i class="fa-solid fa-calendar-check"></i>
+            <span>Agendamento</span>
+          </button>
+          <button id="navAdminBtn" onclick="AppController.switchTab('admin')" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-gray-400 hover:text-white hover:bg-dark-700 flex items-center gap-2">
+            <i class="fa-solid fa-user-shield"></i>
+            <span>Painel Admin</span>
+          </button>
+        </nav>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- CLIENT VIEW -->
+    <section id="customerView" class="space-y-8 transition-opacity duration-300">
+      
+      <!-- Hero Banner -->
+      <div class="relative rounded-2xl overflow-hidden bg-gradient-to-r from-dark-800 via-dark-700 to-dark-800 border border-gray-800 p-6 sm:p-8 shadow-2xl">
+        <div class="absolute -right-10 -bottom-10 opacity-10 text-gold pointer-events-none">
+          <i class="fa-solid fa-scissors text-9xl"></i>
+        </div>
+        <div class="relative z-10 max-w-2xl space-y-3">
+          <span class="inline-block px-3 py-1 rounded-full bg-gold/10 text-gold text-xs font-semibold tracking-wider uppercase border border-gold/20">
+            Agendamento Online
+          </span>
+          <h1 class="font-heading text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Estilo e Tradição para o Seu Visual
+          </h1>
+          <p class="text-gray-400 text-sm sm:text-base leading-relaxed">
+            Escolha seu serviço, selecione a data ideal e garanta o seu horário na melhor barbearia da cidade em poucos cliques.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Step 1 & 2: Services & Date/Time + Location -->
+        <div class="lg:col-span-2 space-y-8">
+          
+          <!-- Step 1: Select Service -->
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl">
+            <div class="flex items-center gap-3 mb-6 border-b border-gray-700/50 pb-4">
+              <span class="w-8 h-8 rounded-full bg-gold text-dark-900 font-bold flex items-center justify-center text-sm">1</span>
+              <h2 class="font-heading font-bold text-lg text-white">Escolha o Serviço</h2>
+            </div>
+            
+            <div id="servicesList" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Services rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Step 2: Select Date & Time -->
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl">
+            <div class="flex items-center gap-3 mb-6 border-b border-gray-700/50 pb-4">
+              <span class="w-8 h-8 rounded-full bg-gold text-dark-900 font-bold flex items-center justify-center text-sm">2</span>
+              <h2 class="font-heading font-bold text-lg text-white">Selecione a Data e Horário</h2>
+            </div>
+
+            <!-- Date Selector -->
+            <div class="mb-6">
+              <label class="block text-xs font-semibold uppercase text-gray-400 mb-2">Selecione o Dia</label>
+              <div class="flex flex-wrap gap-3">
+                <button type="button" id="btnToday" onclick="CustomerModule.setDate('today')" class="date-btn px-4 py-2.5 rounded-lg border text-sm font-medium transition-all bg-gold border-gold text-dark-900 font-semibold shadow-md">
+                  Hoje
+                </button>
+                <button type="button" id="btnTomorrow" onclick="CustomerModule.setDate('tomorrow')" class="date-btn px-4 py-2.5 rounded-lg border text-sm font-medium transition-all bg-dark-700 border-gray-700 text-gray-300 hover:border-gray-500">
+                  Amanhã
+                </button>
+                <input type="date" id="customDateInput" onchange="CustomerModule.setCustomDate(this.value)" class="bg-dark-700 border border-gray-700 text-gray-200 text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-gold focus:border-gold outline-none">
+              </div>
+            </div>
+
+            <!-- Slots Grid -->
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <label class="block text-xs font-semibold uppercase text-gray-400">Horários Disponíveis</label>
+                <span id="selectedDateLabel" class="text-xs text-gold font-medium"></span>
+              </div>
+              <div id="slotsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <!-- Slots rendered dynamically -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Barbershop Location Info Card -->
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-gold/10 text-gold flex items-center justify-center text-xl shrink-0 mt-1 border border-gold/20">
+                <i class="fa-solid fa-location-dot"></i>
+              </div>
+              <div class="space-y-1">
+                <h3 class="font-heading font-bold text-white text-base">Nossa Localização</h3>
+                <p class="text-xs text-gray-300"><i class="fa-solid fa-map-pin text-gold mr-1"></i> Av. Paulista, 1000 - Bela Vista, São Paulo - SP</p>
+                <p class="text-xs text-gray-400"><i class="fa-solid fa-clock text-gold mr-1"></i> Terça a Sábado: 09:00 às 20:00</p>
+                <p class="text-xs text-gray-400"><i class="fa-brands fa-whatsapp text-green-400 mr-1"></i> Contato: (11) 99999-8888</p>
+              </div>
+            </div>
+            <a href="https://maps.google.com" target="_blank" class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-gold border border-gold/30 rounded-lg text-xs font-bold transition shrink-0 flex items-center gap-1.5">
+              <i class="fa-solid fa-compass"></i> Ver no Mapa
+            </a>
+          </div>
+
+        </div>
+
+        <!-- Step 3: Customer Details & Summary -->
+        <div class="lg:col-span-1">
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl sticky top-28">
+            <div class="flex items-center gap-3 mb-6 border-b border-gray-700/50 pb-4">
+              <span class="w-8 h-8 rounded-full bg-gold text-dark-900 font-bold flex items-center justify-center text-sm">3</span>
+              <h2 class="font-heading font-bold text-lg text-white">Seus Dados</h2>
+            </div>
+
+            <form id="bookingForm" onsubmit="CustomerModule.handleBookingSubmit(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Nome Completo</label>
+                <input type="text" id="custName" required placeholder="Ex: João Silva" class="w-full bg-dark-700 border border-gray-700 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold transition">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">WhatsApp / Telefone</label>
+                <input type="tel" id="custPhone" required placeholder="(11) 99999-9999" class="w-full bg-dark-700 border border-gray-700 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold transition">
+              </div>
+
+              <!-- Customer Observation Field -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Observações / Pedidos Especiais (Opcional)</label>
+                <textarea id="custNotes" rows="2" placeholder="Ex: Preferência de barbeiro, degradação baixa..." class="w-full bg-dark-700 border border-gray-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gold transition resize-none"></textarea>
+              </div>
+
+              <!-- Summary Box -->
+              <div class="bg-dark-900/60 rounded-lg p-4 border border-gray-700/50 space-y-2 mt-4">
+                <div class="text-xs font-semibold text-gray-400 uppercase border-b border-gray-800 pb-2">Resumo da Reserva</div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-400">Serviço:</span>
+                  <span id="summaryService" class="font-medium text-gray-200">Selecione...</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-400">Data:</span>
+                  <span id="summaryDate" class="font-medium text-gray-200">-</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-400">Horário:</span>
+                  <span id="summaryTime" class="font-medium text-gold">-</span>
+                </div>
+                <div class="flex justify-between text-sm border-t border-gray-800 pt-2 font-bold">
+                  <span class="text-gray-300">Total:</span>
+                  <span id="summaryPrice" class="text-gold text-base">R$ 0,00</span>
+                </div>
+              </div>
+
+              <button type="submit" id="btnSubmitBooking" class="w-full py-3 px-4 bg-gradient-to-r from-gold to-gold-hover text-dark-900 font-bold rounded-lg shadow-lg shadow-gold/20 hover:brightness-110 active:scale-[0.99] transition duration-200 uppercase tracking-wider text-sm flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check-circle"></i>
+                Confirmar Agendamento
+              </button>
+            </form>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Developer Banner -->
+      <section class="mt-12 bg-gradient-to-r from-dark-800 via-dark-700 to-dark-800 border border-gold/30 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+          <div class="space-y-2 text-center md:text-left">
+            <div class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gold bg-gold/10 px-3 py-1 rounded-full border border-gold/20">
+              <i class="fa-solid fa-code"></i> Protótipo Interativo
+            </div>
+            <h3 class="text-xl sm:text-2xl font-bold text-white font-heading">Quer um site moderno como este para o seu negócio?</h3>
+            <p class="text-gray-400 text-sm max-w-2xl">
+              Criamos soluções web personalizadas para barbearias, salões e profissionais autônomos aumentarem suas vendas e automatizarem agendamentos.
+            </p>
+          </div>
+          <a href="https://wa.me/?text=Ol%C3%A1!%20Vi%20seu%20prot%C3%B3tipo%20de%20site%20para%20barbearia%20e%20gostaria%20de%20fazer%20um%20or%C3%A7amento." target="_blank" class="shrink-0 px-6 py-3.5 bg-gold hover:bg-gold-hover text-dark-900 font-bold rounded-xl transition shadow-lg shadow-gold/20 flex items-center gap-2 text-sm uppercase tracking-wider">
+            <i class="fa-brands fa-whatsapp text-lg"></i> Falar com o Desenvolvedor
+          </a>
+        </div>
+      </section>
+
+    </section>
+
+    <!-- ADMIN VIEW -->
+    <section id="adminView" class="hidden space-y-8 transition-opacity duration-300">
+      
+      <!-- Top Admin Bar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-dark-800 p-6 rounded-2xl border border-gray-800 shadow-xl">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded bg-gold/20 text-gold font-bold text-xs uppercase">Área Restrita</span>
+            <h1 class="font-heading text-2xl font-bold text-white">Painel do Administrador</h1>
+          </div>
+          <p class="text-gray-400 text-sm mt-1">Gerencie serviços, horários, vagas por horário, status de funcionamento e agendamentos.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="AdminModule.logout()" class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-gray-300 hover:text-white rounded-lg text-sm font-medium border border-gray-700 transition flex items-center gap-2">
+            <i class="fa-solid fa-right-from-bracket"></i> Sair do Admin
+          </button>
+        </div>
+      </div>
+
+      <!-- Dashboard Stats -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-dark-800 border border-gray-800 rounded-xl p-5 shadow-lg flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-gold/10 text-gold flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-calendar-check"></i>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-gray-400 uppercase">Total Agendamentos</span>
+            <div id="statTotalBookings" class="text-2xl font-bold text-white">0</div>
+          </div>
+        </div>
+
+        <div class="bg-dark-800 border border-gray-800 rounded-xl p-5 shadow-lg flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-sack-dollar"></i>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-gray-400 uppercase">Faturamento Estimado</span>
+            <div id="statRevenue" class="text-2xl font-bold text-green-400">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="bg-dark-800 border border-gray-800 rounded-xl p-5 shadow-lg flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-chart-pie"></i>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-gray-400 uppercase">Taxa de Ocupação</span>
+            <div id="statOccupancy" class="text-2xl font-bold text-blue-400">0%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column: Config Controls -->
+        <div class="lg:col-span-1 space-y-6">
+          
+          <!-- Admin Date Picker -->
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl">
+            <h2 class="font-heading font-bold text-lg text-white mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-calendar-days text-gold"></i>
+              Data de Gerenciamento
+            </h2>
+            <input type="date" id="adminDateInput" onchange="AdminModule.onDateChange(this.value)" class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-3.5 py-2.5 text-sm focus:border-gold focus:outline-none">
+          </div>
+
+          <!-- Advanced Batch Slot Generator -->
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl">
+            <h2 class="font-heading font-bold text-lg text-white mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles text-gold"></i>
+              Gerador de Horários em Lote
+            </h2>
+            <p class="text-xs text-gray-400 mb-4">Gere a grade inteira do dia definindo horários, intervalos e quantidade de vagas.</p>
+            
+            <form onsubmit="AdminModule.handleBatchGenerate(event)" class="space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Horário Início</label>
+                  <input type="time" id="batchStartTime" value="09:00" required class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-2.5 py-2 text-sm focus:border-gold focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Horário Fim</label>
+                  <input type="time" id="batchEndTime" value="19:00" required class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-2.5 py-2 text-sm focus:border-gold focus:outline-none">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Intervalo (Min)</label>
+                  <select id="batchInterval" class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-2.5 py-2 text-sm focus:border-gold focus:outline-none">
+                    <option value="30">30 minutos</option>
+                    <option value="45">45 minutos</option>
+                    <option value="60" selected>60 minutos (1h)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Vagas p/ Horário</label>
+                  <input type="number" id="batchCapacity" min="1" max="10" value="1" required class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-2.5 py-2 text-sm focus:border-gold focus:outline-none">
+                </div>
+              </div>
+
+              <button type="submit" class="w-full py-2.5 bg-gold hover:bg-gold-hover text-dark-900 font-bold rounded-lg text-sm transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-bolt"></i> Gerar Grade Automática
+              </button>
+            </form>
+          </div>
+
+          <!-- Add Single Slot -->
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl">
+            <h2 class="font-heading font-bold text-lg text-white mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-clock text-gold"></i>
+              Adicionar Horário Individual
+            </h2>
+            <form onsubmit="AdminModule.handleAddSlot(event)" class="space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Horário</label>
+                  <input type="time" id="newSlotTime" required class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:border-gold focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Vagas</label>
+                  <input type="number" id="newSlotCapacity" min="1" max="10" value="1" required class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:border-gold focus:outline-none">
+                </div>
+              </div>
+              <button type="submit" class="w-full py-2 bg-dark-700 hover:bg-dark-600 text-gold border border-gold/30 font-bold rounded-lg text-xs transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-plus"></i> Adicionar Horário
+              </button>
+            </form>
+          </div>
+
+          <!-- Manage Services Section -->
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl">
+            <h2 class="font-heading font-bold text-lg text-white mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-gold"></i>
+              Gerenciar Serviços e Preços
+            </h2>
+            
+            <form onsubmit="AdminModule.handleAddService(event)" class="space-y-3 mb-6 pb-6 border-b border-gray-700/50">
+              <div>
+                <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Nome do Serviço</label>
+                <input type="text" id="svcNameInput" placeholder="Ex: Platinado / Nevou" required class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:border-gold focus:outline-none">
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Preço (R$)</label>
+                  <input type="number" step="0.01" id="svcPriceInput" placeholder="80,00" required class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:border-gold focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Duração</label>
+                  <input type="text" id="svcDurationInput" placeholder="40 min" required class="w-full bg-dark-700 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:border-gold focus:outline-none">
+                </div>
+              </div>
+              <button type="submit" class="w-full py-2 bg-gold hover:bg-gold-hover text-dark-900 font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-plus"></i> Adicionar Novo Serviço
+              </button>
+            </form>
+
+            <div id="adminServicesList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+              <!-- Admin Services list dynamically rendered -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Editable Slots Grid & Appointments List -->
+        <div class="lg:col-span-2 space-y-6">
+          
+          <!-- Existing Editable Slots for Date -->
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-700/50">
+              <div>
+                <h2 class="font-heading font-bold text-lg text-white">Editar Horários da Data</h2>
+                <p class="text-xs text-gray-400">Ajuste vagas ou ative/inative horários na hora</p>
+              </div>
+              <span id="adminSlotCount" class="text-xs text-gold font-bold">0 horários</span>
+            </div>
+
+            <div id="adminSlotsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
+              <!-- Admin Slots dynamically rendered with direct edit capability -->
+            </div>
+          </div>
+
+          <!-- Appointments List -->
+          <div class="bg-dark-800 rounded-xl border border-gray-800 p-6 shadow-xl">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-700/50">
+              <div>
+                <h2 class="font-heading font-bold text-lg text-white">Agendamentos Confirmados</h2>
+                <p class="text-xs text-gray-400">Lista de clientes agendados para a data selecionada</p>
+              </div>
+              <input type="text" id="bookingSearchInput" oninput="AdminModule.filterBookings(this.value)" placeholder="Buscar cliente..." class="bg-dark-700 border border-gray-700 text-xs text-white rounded-lg px-3 py-2 w-full sm:w-48 focus:border-gold focus:outline-none">
+            </div>
+
+            <div id="adminBookingsList" class="space-y-3 max-h-96 overflow-y-auto pr-1">
+              <!-- Bookings list rendered dynamically -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- PIN PROMPT MODAL (ADMIN ACCESS SECURITY) -->
+  <div id="pinModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="bg-dark-800 border border-gray-700 rounded-2xl p-6 sm:p-8 max-w-sm w-full mx-4 shadow-2xl relative transform transition-all">
+      <div class="text-center space-y-3">
+        <div class="w-14 h-14 rounded-full bg-gold/10 text-gold mx-auto flex items-center justify-center text-2xl border border-gold/30">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <h3 class="font-heading text-xl font-bold text-white">Acesso Administrativo</h3>
+        <p class="text-xs text-gray-400">Digite a senha de acesso para gerenciar o painel. <br>(Senha padrão de teste: <span class="text-gold font-mono font-bold">1234</span>)</p>
+      </div>
+
+      <form onsubmit="AdminModule.submitPin(event)" class="mt-6 space-y-4">
+        <div>
+          <input type="password" id="adminPinInput" maxlength="10" placeholder="••••" required class="w-full text-center tracking-widest text-2xl font-mono bg-dark-700 border border-gray-600 rounded-xl py-3 text-white focus:border-gold focus:outline-none">
+        </div>
+        
+        <div id="pinError" class="text-xs text-red-400 text-center hidden font-medium">
+          <i class="fa-solid fa-circle-exclamation"></i> Senha incorreta! Tente novamente.
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <button type="button" onclick="AdminModule.closePinModal()" class="py-2.5 px-4 bg-dark-700 hover:bg-dark-600 text-gray-300 font-semibold rounded-xl text-sm transition">
+            Cancelar
+          </button>
+          <button type="submit" class="py-2.5 px-4 bg-gold hover:bg-gold-hover text-dark-900 font-bold rounded-xl text-sm transition">
+            Entrar
+          </button>
+        </div>
+      </form>
+      
+      <div class="mt-4 pt-4 border-t border-gray-700/50 text-center">
+        <button type="button" onclick="AdminModule.fillDemoPin()" class="text-xs text-gold/80 hover:text-gold underline">
+          Usar senha de teste (1234)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOOKING SUCCESS MODAL -->
+  <div id="successModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="bg-dark-800 border border-gray-700 rounded-2xl p-6 sm:p-8 max-w-md w-full mx-4 shadow-2xl space-y-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-green-500/10 text-green-400 mx-auto flex items-center justify-center text-3xl border border-green-500/30">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+
+      <div class="space-y-2">
+        <h3 class="font-heading text-2xl font-bold text-white">Agendamento Realizado!</h3>
+        <p class="text-sm text-gray-300">Seu horário foi reservado com sucesso no sistema.</p>
+      </div>
+
+      <div id="receiptContent" class="bg-dark-900 rounded-xl p-4 text-left border border-gray-800 space-y-2 text-xs sm:text-sm">
+        <!-- Filled dynamically -->
+      </div>
+
+      <div class="space-y-3">
+        <a id="whatsappBtn" href="#" target="_blank" class="w-full py-3 px-4 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
+          <i class="fa-brands fa-whatsapp text-lg"></i> Confirmar pelo WhatsApp
+        </a>
+        <button onclick="CustomerModule.closeSuccessModal()" class="w-full py-2.5 px-4 bg-dark-700 hover:bg-dark-600 text-gray-300 font-medium rounded-xl text-sm transition">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOM CONFIRMATION MODAL -->
+  <div id="customConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="bg-dark-800 border border-gray-700 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl text-center space-y-4">
+      <div class="w-12 h-12 rounded-full bg-red-500/10 text-red-400 mx-auto flex items-center justify-center text-xl border border-red-500/20">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 id="confirmModalTitle" class="font-heading font-bold text-lg text-white">Confirmação</h3>
+      <p id="confirmModalMessage" class="text-xs text-gray-300 leading-relaxed"></p>
+
+      <div class="grid grid-cols-2 gap-3 pt-2">
+        <button id="confirmCancelBtn" class="py-2 px-4 bg-dark-700 hover:bg-dark-600 text-gray-300 font-medium rounded-xl text-xs transition">
+          Cancelar
+        </button>
+        <button id="confirmOkBtn" class="py-2 px-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Footer -->
+  <footer class="bg-dark-800 border-t border-gray-800 py-6 text-center text-xs text-gray-500 mt-auto">
+    <div class="max-w-7xl mx-auto px-4">
+      <p>© 2026 Barbearia Império. Sistema de Agendamento Online - Protótipo Comercial.</p>
+    </div>
+  </footer>
+
+  <!-- Custom Script -->
+  <script src="js/script.js"></script>
+</body>
+</html>
