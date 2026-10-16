@@ -1,23 +1,96 @@
 /**
- * BARBER SHOP SCHEDULER SYSTEM - COMPLETE JAVASCRIPT MODULE
+ * BARBER SHOP SCHEDULER SYSTEM - FIREBASE REAL-TIME CLOUD CONNECTED
  */
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCRlF91aFvw7B-rXI0HF3-TB2bWtiNzLz0",
+  authDomain: "barbearia-prototipo-3b00f.firebaseapp.com",
+  projectId: "barbearia-prototipo-3b00f",
+  storageBucket: "barbearia-prototipo-3b00f.firebasestorage.app",
+  messagingSenderId: "710529029431",
+  appId: "1:710529029431:web:7cd1a67959fecdfea9f6b2",
+  measurementId: "G-QD89MCE8JL"
+};
 
 // Global App State
 const AppState = {
   activeTab: 'customer',
-  isAdminAuthenticated: false, // Security: Must authenticate every time Admin tab is clicked
+  isAdminAuthenticated: false,
   selectedService: null,
   selectedDate: getFormattedDate(new Date()),
   selectedSlotId: null,
   
-  // Default Initial Services List
-  defaultServices: [
+  services: [
     { id: 's1', name: 'Corte Cabelo Social / Fade', price: 40, duration: '30 min', icon: 'fa-scissors' },
     { id: 's2', name: 'Barba Completa com Toalha Quente', price: 30, duration: '25 min', icon: 'fa-user-ninja' },
     { id: 's3', name: 'Combo Império (Cabelo + Barba)', price: 65, duration: '50 min', icon: 'fa-crown' },
     { id: 's4', name: 'Pezinho / Acabamento + Sobrancelha', price: 25, duration: '20 min', icon: 'fa-wand-magic-sparkles' }
-  ]
+  ],
+  slots: [],
+  bookings: []
 };
+
+let db = null;
+let isCloudActive = false;
+
+// Initialize Firebase Connection
+function initFirebase() {
+  if (typeof firebase !== 'undefined' && firebaseConfig.apiKey) {
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      db = firebase.firestore();
+      isCloudActive = true;
+      
+      const badge = document.getElementById('dbStatusBadge');
+      if (badge) {
+        badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold uppercase border border-green-500/30";
+        badge.innerHTML = `<i class="fa-solid fa-cloud"></i> Nuvem Firebase Conectada`;
+      }
+      
+      listenCloudRealtime();
+    } catch (e) {
+      console.warn("Erro ao conectar ao Firebase Cloud, executando em modo local.", e);
+    }
+  }
+}
+
+// Real-time listener across devices
+function listenCloudRealtime() {
+  if (!isCloudActive) return;
+
+  // 1. Listen Services Changes
+  db.collection('services').onSnapshot(snapshot => {
+    if (!snapshot.empty) {
+      AppState.services = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      CustomerModule.renderServices();
+      AdminModule.renderAdminServices();
+    } else {
+      // Seed default services if database is completely empty
+      AppState.services.forEach(svc => {
+        db.collection('services').doc(svc.id).set(svc);
+      });
+    }
+  }, err => console.error("Erro listener serviços:", err));
+
+  // 2. Listen Slots Changes
+  db.collection('slots').onSnapshot(snapshot => {
+    AppState.slots = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    CustomerModule.renderSlots();
+    AdminModule.renderAdminSlots();
+    AdminModule.renderDashboardStats();
+  }, err => console.error("Erro listener horários:", err));
+
+  // 3. Listen Bookings Changes (Sync PC <-> Cellphone)
+  db.collection('bookings').onSnapshot(snapshot => {
+    AppState.bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    CustomerModule.renderSlots();
+    AdminModule.renderAdminBookings();
+    AdminModule.renderDashboardStats();
+  }, err => console.error("Erro listener agendamentos:", err));
+}
 
 // Date Utility Functions
 function getFormattedDate(dateObj) {
@@ -34,163 +107,152 @@ function formatDateToBR(dateStr) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-// LocalStorage Persistence Layer
+// Data Access Layer
 const BarberStorage = {
   KEYS: {
-    SERVICES: 'barber_services_v3',
-    SLOTS: 'barber_slots_v3',
-    BOOKINGS: 'barber_bookings_v3'
+    SERVICES: 'barber_services_v5',
+    SLOTS: 'barber_slots_v5',
+    BOOKINGS: 'barber_bookings_v5'
   },
 
   initDefaultData() {
-    // 1. Initialize Services
-    if (!localStorage.getItem(this.KEYS.SERVICES)) {
-      localStorage.setItem(this.KEYS.SERVICES, JSON.stringify(AppState.defaultServices));
-    }
+    if (!isCloudActive) {
+      if (!localStorage.getItem(this.KEYS.SERVICES)) {
+        localStorage.setItem(this.KEYS.SERVICES, JSON.stringify(AppState.services));
+      } else {
+        AppState.services = JSON.parse(localStorage.getItem(this.KEYS.SERVICES));
+      }
 
-    // 2. Initialize Slots (Today & Tomorrow)
-    if (!localStorage.getItem(this.KEYS.SLOTS)) {
-      const today = getFormattedDate(new Date());
-      const tomorrowObj = new Date();
-      tomorrowObj.setDate(tomorrowObj.getDate() + 1);
-      const tomorrow = getFormattedDate(tomorrowObj);
+      if (!localStorage.getItem(this.KEYS.SLOTS)) {
+        const today = getFormattedDate(new Date());
+        const tomorrowObj = new Date();
+        tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+        const tomorrow = getFormattedDate(tomorrowObj);
 
-      const defaultTimes = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
-      const initialSlots = [];
+        const defaultTimes = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+        const initialSlots = [];
 
-      [today, tomorrow].forEach(date => {
-        defaultTimes.forEach((time, index) => {
-          initialSlots.push({
-            id: `slot_${date}_${time.replace(':', '')}`,
-            date: date,
-            time: time,
-            capacity: (index === 2) ? 2 : 1,
-            active: true
+        [today, tomorrow].forEach(date => {
+          defaultTimes.forEach((time, index) => {
+            initialSlots.push({
+              id: `slot_${date}_${time.replace(':', '')}`,
+              date: date,
+              time: time,
+              capacity: (index === 2) ? 2 : 1,
+              active: true
+            });
           });
         });
-      });
 
-      localStorage.setItem(this.KEYS.SLOTS, JSON.stringify(initialSlots));
-    }
+        localStorage.setItem(this.KEYS.SLOTS, JSON.stringify(initialSlots));
+        AppState.slots = initialSlots;
+      } else {
+        AppState.slots = JSON.parse(localStorage.getItem(this.KEYS.SLOTS));
+      }
 
-    // 3. Initialize Sample Booking
-    if (!localStorage.getItem(this.KEYS.BOOKINGS)) {
-      const today = getFormattedDate(new Date());
-      const sampleBookings = [
-        {
-          id: 'bk_1001',
-          slotId: `slot_${today}_0900`,
-          customerName: 'Carlos Eduardo',
-          customerPhone: '(11) 98888-7777',
-          customerNotes: 'Preferência por degradê baixo.',
-          serviceName: 'Combo Império (Cabelo + Barba)',
-          servicePrice: 65,
-          date: today,
-          time: '09:00',
-          createdAt: new Date().toISOString()
-        }
-      ];
-      localStorage.setItem(this.KEYS.BOOKINGS, JSON.stringify(sampleBookings));
+      if (!localStorage.getItem(this.KEYS.BOOKINGS)) {
+        AppState.bookings = [];
+      } else {
+        AppState.bookings = JSON.parse(localStorage.getItem(this.KEYS.BOOKINGS));
+      }
     }
   },
 
-  // Services CRUD
   getServices() {
-    return JSON.parse(localStorage.getItem(this.KEYS.SERVICES) || '[]');
-  },
-
-  saveServices(services) {
-    localStorage.setItem(this.KEYS.SERVICES, JSON.stringify(services));
+    return AppState.services;
   },
 
   addService(serviceObj) {
-    const services = this.getServices();
-    services.push(serviceObj);
-    this.saveServices(services);
+    if (isCloudActive) {
+      db.collection('services').doc(serviceObj.id).set(serviceObj);
+    } else {
+      AppState.services.push(serviceObj);
+      localStorage.setItem(this.KEYS.SERVICES, JSON.stringify(AppState.services));
+    }
   },
 
   deleteService(serviceId) {
-    let services = this.getServices();
-    services = services.filter(s => s.id !== serviceId);
-    this.saveServices(services);
+    if (isCloudActive) {
+      db.collection('services').doc(serviceId).delete();
+    } else {
+      AppState.services = AppState.services.filter(s => s.id !== serviceId);
+      localStorage.setItem(this.KEYS.SERVICES, JSON.stringify(AppState.services));
+    }
   },
 
-  // Slots CRUD
   getSlots(date) {
-    const allSlots = JSON.parse(localStorage.getItem(this.KEYS.SLOTS) || '[]');
-    if (!date) return allSlots;
-    return allSlots.filter(s => s.date === date);
-  },
-
-  getAllSlotsRaw() {
-    return JSON.parse(localStorage.getItem(this.KEYS.SLOTS) || '[]');
-  },
-
-  saveSlots(slots) {
-    localStorage.setItem(this.KEYS.SLOTS, JSON.stringify(slots));
+    if (!date) return AppState.slots;
+    return AppState.slots.filter(s => s.date === date);
   },
 
   addSlot(date, time, capacity = 1) {
-    const slots = this.getAllSlotsRaw();
     const id = `slot_${date}_${time.replace(':', '')}`;
-    
-    const existing = slots.find(s => s.id === id);
-    if (existing) {
-      existing.active = true;
-      existing.capacity = parseInt(capacity);
+    const slotData = { id, date, time, capacity: parseInt(capacity), active: true };
+
+    if (isCloudActive) {
+      db.collection('slots').doc(id).set(slotData, { merge: true });
     } else {
-      slots.push({ id, date, time, capacity: parseInt(capacity), active: true });
+      const existingIdx = AppState.slots.findIndex(s => s.id === id);
+      if (existingIdx >= 0) {
+        AppState.slots[existingIdx].capacity = parseInt(capacity);
+        AppState.slots[existingIdx].active = true;
+      } else {
+        AppState.slots.push(slotData);
+      }
+      localStorage.setItem(this.KEYS.SLOTS, JSON.stringify(AppState.slots));
     }
-    
-    this.saveSlots(slots);
   },
 
   updateSlot(slotId, newCapacity, isActive) {
-    const slots = this.getAllSlotsRaw();
-    const slot = slots.find(s => s.id === slotId);
-    if (slot) {
-      if (newCapacity !== undefined) slot.capacity = parseInt(newCapacity);
-      if (isActive !== undefined) slot.active = isActive;
-      this.saveSlots(slots);
+    if (isCloudActive) {
+      const updateObj = {};
+      if (newCapacity !== undefined) updateObj.capacity = parseInt(newCapacity);
+      if (isActive !== undefined) updateObj.active = isActive;
+      db.collection('slots').doc(slotId).update(updateObj);
+    } else {
+      const slot = AppState.slots.find(s => s.id === slotId);
+      if (slot) {
+        if (newCapacity !== undefined) slot.capacity = parseInt(newCapacity);
+        if (isActive !== undefined) slot.active = isActive;
+        localStorage.setItem(this.KEYS.SLOTS, JSON.stringify(AppState.slots));
+      }
     }
   },
 
   deleteSlot(slotId) {
-    let slots = this.getAllSlotsRaw();
-    slots = slots.filter(s => s.id !== slotId);
-    this.saveSlots(slots);
+    if (isCloudActive) {
+      db.collection('slots').doc(slotId).delete();
+    } else {
+      AppState.slots = AppState.slots.filter(s => s.id !== slotId);
+      localStorage.setItem(this.KEYS.SLOTS, JSON.stringify(AppState.slots));
+    }
   },
 
-  // Bookings CRUD
   getBookings(date) {
-    const allBookings = JSON.parse(localStorage.getItem(this.KEYS.BOOKINGS) || '[]');
-    if (!date) return allBookings;
-    return allBookings.filter(b => b.date === date);
-  },
-
-  getAllBookings() {
-    return JSON.parse(localStorage.getItem(this.KEYS.BOOKINGS) || '[]');
-  },
-
-  saveBookings(bookings) {
-    localStorage.setItem(this.KEYS.BOOKINGS, JSON.stringify(bookings));
+    if (!date) return AppState.bookings;
+    return AppState.bookings.filter(b => b.date === date);
   },
 
   addBooking(bookingObj) {
-    const bookings = this.getAllBookings();
-    bookings.push(bookingObj);
-    this.saveBookings(bookings);
+    if (isCloudActive) {
+      db.collection('bookings').doc(bookingObj.id).set(bookingObj);
+    } else {
+      AppState.bookings.push(bookingObj);
+      localStorage.setItem(this.KEYS.BOOKINGS, JSON.stringify(AppState.bookings));
+    }
   },
 
   cancelBooking(bookingId) {
-    let bookings = this.getAllBookings();
-    bookings = bookings.filter(b => b.id !== bookingId);
-    this.saveBookings(bookings);
+    if (isCloudActive) {
+      db.collection('bookings').doc(bookingId).delete();
+    } else {
+      AppState.bookings = AppState.bookings.filter(b => b.id !== bookingId);
+      localStorage.setItem(this.KEYS.BOOKINGS, JSON.stringify(AppState.bookings));
+    }
   },
 
   getSlotBookingsCount(slotId) {
-    const bookings = this.getAllBookings();
-    return bookings.filter(b => b.slotId === slotId).length;
+    return AppState.bookings.filter(b => b.slotId === slotId).length;
   }
 };
 
@@ -285,7 +347,6 @@ const CustomerModule = {
       </div>
     `).join('');
 
-    // Select first service by default if none selected
     if (!AppState.selectedService || !services.find(s => s.id === AppState.selectedService.id)) {
       this.selectService(services[0].id);
     } else {
@@ -351,7 +412,6 @@ const CustomerModule = {
 
   renderSlots() {
     const container = document.getElementById('slotsGrid');
-    // Only show active slots to customer
     const slots = BarberStorage.getSlots(AppState.selectedDate).filter(s => s.active !== false);
 
     if (slots.length === 0) {
@@ -481,7 +541,6 @@ const CustomerModule = {
     };
 
     BarberStorage.addBooking(booking);
-    this.renderSlots();
     
     document.getElementById('bookingForm').reset();
     AppState.selectedSlotId = null;
@@ -542,7 +601,6 @@ const AdminModule = {
     this.renderAdminServices();
   },
 
-  // Security: Open PIN prompt modal EVERY TIME user clicks Admin
   promptPinModal() {
     document.getElementById('adminPinInput').value = '';
     document.getElementById('pinError').classList.add('hidden');
@@ -614,7 +672,6 @@ const AdminModule = {
     document.getElementById('statOccupancy').innerText = `${occupancyRate}%`;
   },
 
-  // EDITABLE SLOTS MANAGEMENT
   renderAdminSlots() {
     const container = document.getElementById('adminSlotsContainer');
     const slots = BarberStorage.getSlots(this.currentDate);
@@ -641,13 +698,11 @@ const AdminModule = {
           <div class="flex items-center justify-between">
             <span class="font-bold text-white text-base">${slot.time}</span>
             <div class="flex items-center gap-1.5">
-              <!-- Active / Inactive Toggle -->
               <button onclick="AdminModule.toggleSlotActive('${slot.id}', ${!isActive})" 
                       class="px-2 py-1 rounded text-[10px] font-bold uppercase transition ${isActive ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}">
                 ${isActive ? 'Ativo' : 'Inativo'}
               </button>
               
-              <!-- Delete Slot -->
               <button onclick="AdminModule.confirmDeleteSlot('${slot.id}', '${slot.time}')" 
                       class="p-1 text-gray-400 hover:text-red-400 transition" title="Excluir Horário">
                 <i class="fa-solid fa-trash-can text-xs"></i>
@@ -655,7 +710,6 @@ const AdminModule = {
             </div>
           </div>
 
-          <!-- Edit Capacity Row -->
           <div class="flex items-center justify-between text-xs pt-1 border-t border-gray-600/40">
             <span class="text-gray-400">Agendados: <strong class="text-white">${bookedCount}</strong></span>
             <div class="flex items-center gap-1">
@@ -672,9 +726,6 @@ const AdminModule = {
 
   toggleSlotActive(slotId, newStatus) {
     BarberStorage.updateSlot(slotId, undefined, newStatus);
-    this.renderAdminSlots();
-    this.renderDashboardStats();
-    CustomerModule.renderSlots();
     BarberUI.showToast(`Status do horário atualizado.`, 'info');
   },
 
@@ -683,9 +734,6 @@ const AdminModule = {
     if (isNaN(val) || val < 1) return;
 
     BarberStorage.updateSlot(slotId, val, undefined);
-    this.renderAdminSlots();
-    this.renderDashboardStats();
-    CustomerModule.renderSlots();
     BarberUI.showToast(`Quantidade de vagas alterada para ${val}.`, 'success');
   },
 
@@ -700,13 +748,9 @@ const AdminModule = {
     }
 
     BarberStorage.addSlot(this.currentDate, time, capacity);
-    this.renderAdminSlots();
-    this.renderDashboardStats();
-    CustomerModule.renderSlots();
     BarberUI.showToast(`Horário ${time} adicionado!`, 'success');
   },
 
-  // BATCH GENERATOR WITH CUSTOM TIME, INTERVAL & CAPACITY
   handleBatchGenerate(event) {
     event.preventDefault();
     const startTime = document.getElementById('batchStartTime').value;
@@ -740,10 +784,7 @@ const AdminModule = {
       count++;
     }
 
-    this.renderAdminSlots();
-    this.renderDashboardStats();
-    CustomerModule.renderSlots();
-    BarberUI.showToast(`Gerados ${count} horários com ${capacity} vaga(s) cada para ${formatDateToBR(this.currentDate)}!`, 'success');
+    BarberUI.showToast(`Gerados ${count} horários com ${capacity} vaga(s) cada!`, 'success');
   },
 
   confirmDeleteSlot(slotId, time) {
@@ -755,14 +796,10 @@ const AdminModule = {
 
     BarberUI.showConfirm('Remover Horário', message, () => {
       BarberStorage.deleteSlot(slotId);
-      AdminModule.renderAdminSlots();
-      AdminModule.renderDashboardStats();
-      CustomerModule.renderSlots();
       BarberUI.showToast('Horário removido com sucesso.', 'info');
     });
   },
 
-  // ADMIN SERVICES MANAGEMENT
   renderAdminServices() {
     const container = document.getElementById('adminServicesList');
     const services = BarberStorage.getServices();
@@ -806,10 +843,7 @@ const AdminModule = {
     };
 
     BarberStorage.addService(newService);
-    this.renderAdminServices();
-    CustomerModule.renderServices();
     
-    // Reset Inputs
     document.getElementById('svcNameInput').value = '';
     document.getElementById('svcPriceInput').value = '';
     document.getElementById('svcDurationInput').value = '';
@@ -823,14 +857,11 @@ const AdminModule = {
       `Deseja realmente excluir o serviço "${serviceName}"? Ele não aparecerá mais para os clientes.`,
       () => {
         BarberStorage.deleteService(serviceId);
-        AdminModule.renderAdminServices();
-        CustomerModule.renderServices();
         BarberUI.showToast('Serviço removido com sucesso.', 'info');
       }
     );
   },
 
-  // ADMIN BOOKINGS MANAGEMENT
   renderAdminBookings(filterTerm = '') {
     const container = document.getElementById('adminBookingsList');
     let bookings = BarberStorage.getBookings(this.currentDate);
@@ -893,10 +924,6 @@ const AdminModule = {
       `Tem certeza que deseja cancelar o agendamento de ${customerName} às ${time}? A vaga será liberada imediatamente.`,
       () => {
         BarberStorage.cancelBooking(bookingId);
-        AdminModule.renderAdminBookings();
-        AdminModule.renderDashboardStats();
-        AdminModule.renderAdminSlots();
-        CustomerModule.renderSlots();
         BarberUI.showToast('Agendamento cancelado e vaga liberada.', 'info');
       }
     );
@@ -906,18 +933,17 @@ const AdminModule = {
 // Global Navigation & Controller
 const AppController = {
   init() {
+    initFirebase();
     BarberStorage.initDefaultData();
     CustomerModule.init();
   },
 
   switchTab(tabName) {
     if (tabName === 'admin') {
-      // Always prompt PIN modal when clicking Painel Admin
       AdminModule.promptPinModal();
       return;
     }
 
-    // Switch back to Customer View
     AppState.activeTab = 'customer';
     document.getElementById('adminView').classList.add('hidden');
     document.getElementById('customerView').classList.remove('hidden');
